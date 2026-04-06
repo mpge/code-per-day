@@ -1,0 +1,61 @@
+<svg width="840" height="440" viewBox="0 0 840 440" xmlns="http://www.w3.org/2000/svg">
+  
+    <style>
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes growBar {
+        from { transform: scaleY(0); }
+        to   { transform: scaleY(1); }
+      }
+      .cpd-header  { animation: fadeInUp 0.5s ease both; }
+      .cpd-stats   { animation: fadeInUp 0.5s ease 0.15s both; }
+      .cpd-chart   { animation: fadeInUp 0.5s ease 0.3s both; }
+      .cpd-legend  { animation: fadeInUp 0.5s ease 0.45s both; }
+    </style>
+
+  <!-- Background -->
+  <rect width="840" height="440" rx="12" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
+
+  <!-- Header -->
+  <g class="cpd-header">
+    <text x="24" y="44" fill="#1f2328" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
+    <text x="816" y="44" fill="#8b949e" font-size="13" font-family="'Segoe UI', sans-serif" text-anchor="end" font-weight="500">@mpge</text>
+  </g>
+
+  <!-- Stats Cards -->
+  <g class="cpd-stats">
+    
+    <rect x="24" y="60" width="190" height="68" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
+    <text x="119" y="78" fill="#8b949e" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">Today</text>
+    <text x="119" y="100" fill="#1a7f37" font-size="16" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">+1,999</text>
+    <text x="119" y="118" fill="#cf222e" font-size="14" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="600">-1,106</text>
+    <rect x="222" y="60" width="190" height="68" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
+    <text x="317" y="78" fill="#8b949e" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">30d Avg</text>
+    <text x="317" y="100" fill="#1a7f37" font-size="16" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">+576</text>
+    <text x="317" y="118" fill="#cf222e" font-size="14" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="600">-251</text>
+    <rect x="420" y="60" width="190" height="68" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
+    <text x="515" y="78" fill="#8b949e" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">Year Avg</text>
+    <text x="515" y="100" fill="#1a7f37" font-size="16" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">+571</text>
+    <text x="515" y="118" fill="#cf222e" font-size="14" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="600">-240</text>
+        <rect x="618" y="60" width="190" height="68" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
+        <text x="713" y="78" fill="#8b949e" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">Streak</text>
+        <text x="713" y="104" fill="#0969da" font-size="20" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">8</text>
+        <text x="713" y="120" fill="#8b949e" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle">days</text>
+  </g>
+
+  <!-- Chart -->
+  <g class="cpd-chart">
+    <line x1="72" y1="148" x2="808" y2="148" stroke="#eaeef2" stroke-width="1" stroke-dasharray="4,4"/><line x1="72" y1="208.5" x2="808" y2="208.5" stroke="#eaeef2" stroke-width="1" stroke-dasharray="4,4"/><line x1="72" y1="269" x2="808" y2="269" stroke="#eaeef2" stroke-width="1" stroke-dasharray="4,4"/><line x1="72" y1="329.5" x2="808" y2="329.5" stroke="#eaeef2" stroke-width="1" stroke-dasharray="4,4"/><line x1="72" y1="390" x2="808" y2="390" stroke="#eaeef2" stroke-width="1" stroke-dasharray="4,4"/><line x1="72" y1="269" x2="808" y2="269" stroke="#d0d7de" stroke-width="1.5"/><text x="64" y="162" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">+2,930</text><text x="64" y="386" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">-2,930</text><text x="64" y="273" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">0</text><path d="M 72 269 L 72 269 L 96.53333333333333 261.12013651877135 L 121.06666666666666 269 L 145.60000000000002 262.521843003413 L 170.13333333333333 263.99931740614335 L 194.66666666666669 216.90955631399316 L 219.20000000000002 242.29180887372013 L 243.73333333333335 268.16655290102386 L 268.26666666666665 268.7348122866894 L 292.8 263.4310580204778 L 317.33333333333337 264.60546075085324 L 341.8666666666667 269 L 366.40000000000003 245.85290102389078 L 390.93333333333334 264.71911262798636 L 415.4666666666667 186.52662116040955 L 440 260.96860068259383 L 464.53333333333336 269 L 489.0666666666667 266.4617747440273 L 513.6 250.47474402730376 L 538.1333333333334 247.63344709897612 L 562.6666666666667 164.4023890784983 L 587.2 269 L 611.7333333333333 269 L 636.2666666666667 222.97098976109214 L 660.8000000000001 158 L 685.3333333333334 264.4160409556314 L 709.8666666666667 247.86075085324234 L 734.4000000000001 237.6320819112628 L 758.9333333333334 258.7334470989761 L 783.4666666666667 267.14368600682593 L 808 193.26996587030717 L 808 269 Z" fill="#1a7f37" opacity="0.15"/><path d="M 72 269 L 72 269 L 96.53333333333333 261.12013651877135 L 121.06666666666666 269 L 145.60000000000002 262.521843003413 L 170.13333333333333 263.99931740614335 L 194.66666666666669 216.90955631399316 L 219.20000000000002 242.29180887372013 L 243.73333333333335 268.16655290102386 L 268.26666666666665 268.7348122866894 L 292.8 263.4310580204778 L 317.33333333333337 264.60546075085324 L 341.8666666666667 269 L 366.40000000000003 245.85290102389078 L 390.93333333333334 264.71911262798636 L 415.4666666666667 186.52662116040955 L 440 260.96860068259383 L 464.53333333333336 269 L 489.0666666666667 266.4617747440273 L 513.6 250.47474402730376 L 538.1333333333334 247.63344709897612 L 562.6666666666667 164.4023890784983 L 587.2 269 L 611.7333333333333 269 L 636.2666666666667 222.97098976109214 L 660.8000000000001 158 L 685.3333333333334 264.4160409556314 L 709.8666666666667 247.86075085324234 L 734.4000000000001 237.6320819112628 L 758.9333333333334 258.7334470989761 L 783.4666666666667 267.14368600682593 L 808 193.26996587030717" fill="none" stroke="#1a7f37" stroke-width="2"/><path d="M 72 269 L 72 269 L 96.53333333333333 273.31877133105803 L 121.06666666666666 269 L 145.60000000000002 270.36382252559724 L 170.13333333333333 272.90204778157 L 194.66666666666669 285.1006825938567 L 219.20000000000002 279.0392491467577 L 243.73333333333335 271.72764505119454 L 268.26666666666665 270.5911262798635 L 292.8 271.3109215017065 L 317.33333333333337 270.17440273037545 L 341.8666666666667 269 L 366.40000000000003 289.3436860068259 L 390.93333333333334 271.0078498293515 L 415.4666666666667 296.61740614334474 L 440 272.06860068259385 L 464.53333333333336 269 L 489.0666666666667 269.719795221843 L 513.6 274.00068259385665 L 538.1333333333334 277.48600682593855 L 562.6666666666667 314.61228668941976 L 587.2 269 L 611.7333333333333 269 L 636.2666666666667 290.17713310580206 L 660.8000000000001 322.98464163822524 L 685.3333333333334 272.6368600682594 L 709.8666666666667 275.1750853242321 L 734.4000000000001 273.73549488054607 L 758.9333333333334 274.0764505119454 L 783.4666666666667 270.43959044368603 L 808 310.8996587030717 L 808 269 Z" fill="#cf222e" opacity="0.15"/><path d="M 72 269 L 72 269 L 96.53333333333333 273.31877133105803 L 121.06666666666666 269 L 145.60000000000002 270.36382252559724 L 170.13333333333333 272.90204778157 L 194.66666666666669 285.1006825938567 L 219.20000000000002 279.0392491467577 L 243.73333333333335 271.72764505119454 L 268.26666666666665 270.5911262798635 L 292.8 271.3109215017065 L 317.33333333333337 270.17440273037545 L 341.8666666666667 269 L 366.40000000000003 289.3436860068259 L 390.93333333333334 271.0078498293515 L 415.4666666666667 296.61740614334474 L 440 272.06860068259385 L 464.53333333333336 269 L 489.0666666666667 269.719795221843 L 513.6 274.00068259385665 L 538.1333333333334 277.48600682593855 L 562.6666666666667 314.61228668941976 L 587.2 269 L 611.7333333333333 269 L 636.2666666666667 290.17713310580206 L 660.8000000000001 322.98464163822524 L 685.3333333333334 272.6368600682594 L 709.8666666666667 275.1750853242321 L 734.4000000000001 273.73549488054607 L 758.9333333333334 274.0764505119454 L 783.4666666666667 270.43959044368603 L 808 310.8996587030717" fill="none" stroke="#cf222e" stroke-width="2"/><text x="72" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Mar 7</text><text x="194.66666666666669" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Mar 12</text><text x="317.33333333333337" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Mar 17</text><text x="440" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Mar 22</text><text x="562.6666666666667" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Mar 27</text><text x="685.3333333333334" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Apr 1</text><text x="808" y="406" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">Apr 6</text>
+  </g>
+
+  <!-- Legend -->
+  <g class="cpd-legend">
+    <circle cx="30" cy="422" r="5" fill="#1a7f37"/>
+    <text x="40" y="426" fill="#656d76" font-size="11" font-family="'Segoe UI', sans-serif">Additions</text>
+    <circle cx="124" cy="422" r="5" fill="#cf222e"/>
+    <text x="134" y="426" fill="#656d76" font-size="11" font-family="'Segoe UI', sans-serif">Deletions</text>
+    <text x="816" y="426" fill="#8b949e" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last 31 days · +17,848 / -7,774 lines</text>
+  </g>
+</svg>

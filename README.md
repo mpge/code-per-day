@@ -6,9 +6,37 @@ Uses the GitHub GraphQL API to fetch commit data across all repositories you've 
 
 ## Preview
 
-| Dark | Tokyo Night | Dracula |
-|------|-------------|---------|
-| ![dark](https://raw.githubusercontent.com/mpge/code-per-day/main/examples/code-per-day-dark.svg) | ![tokyonight](https://raw.githubusercontent.com/mpge/code-per-day/main/examples/code-per-day-tokyonight.svg) | ![dracula](https://raw.githubusercontent.com/mpge/code-per-day/main/examples/code-per-day-dracula.svg) |
+### Bar Charts
+
+| Dark | Light |
+|------|-------|
+| ![dark](examples/code-per-day-dark.svg) | ![light](examples/code-per-day-light.svg) |
+
+| Tokyo Night | Dracula |
+|-------------|---------|
+| ![tokyonight](examples/code-per-day-tokyonight.svg) | ![dracula](examples/code-per-day-dracula.svg) |
+
+| Nord | Ocean |
+|------|-------|
+| ![nord](examples/code-per-day-nord.svg) | ![ocean](examples/code-per-day-ocean.svg) |
+
+| Sunset | Forest |
+|--------|--------|
+| ![sunset](examples/code-per-day-sunset.svg) | ![forest](examples/code-per-day-forest.svg) |
+
+| Midnight | Radical |
+|----------|---------|
+| ![midnight](examples/code-per-day-midnight.svg) | ![radical](examples/code-per-day-radical.svg) |
+
+| GitHub Dark | Transparent |
+|-------------|-------------|
+| ![github-dark](examples/code-per-day-github-dark.svg) | ![transparent](examples/code-per-day-transparent.svg) |
+
+### Area Charts
+
+| Dark | Tokyo Night |
+|------|-------------|
+| ![dark-area](examples/code-per-day-dark-area.svg) | ![tokyonight-area](examples/code-per-day-tokyonight-area.svg) |
 
 ## Quick Start
 
