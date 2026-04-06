@@ -23,14 +23,14 @@ async function run() {
     const animate = core.getInput("animations") !== "false";
 
     // Fetch data from GitHub
-    const { login, commits, since, now, yearAgo } = await fetchAllCommitData(
+    const { login, commits, since, now, yearAgo, calendar } = await fetchAllCommitData(
       token,
       username || undefined,
       period
     );
 
     // Process into chart data
-    const { chartData, stats } = processData(commits, since, now, yearAgo);
+    const { chartData, stats } = processData(commits, since, now, yearAgo, calendar);
 
     console.log(`\nStats for @${login}:`);
     console.log(`  Today:    +${stats.today.additions} / -${stats.today.deletions}`);

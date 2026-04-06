@@ -134,6 +134,39 @@ async function getRepoCommitStats(gql, owner, name, since, authorId) {
 }
 
 /**
+ * Fetch the contribution calendar (green squares) which includes ALL
+ * contributions across all branches, PRs, and repos.
+ * Returns a Map<string, number> of date -> contribution count.
+ */
+async function getContributionCalendar(gql, login, from, to) {
+  const { user } = await gql(
+    `query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { login, from: from.toISOString(), to: to.toISOString() }
+  );
+
+  const calendar = new Map();
+  for (const week of user.contributionsCollection.contributionCalendar.weeks) {
+    for (const day of week.contributionDays) {
+      calendar.set(day.date, day.contributionCount);
+    }
+  }
+  return calendar;
+}
+
+/**
  * Main entry: fetch all commit data for the user across contributed repos.
  * Returns raw array of { additions, deletions, date } objects.
  */
@@ -167,6 +200,10 @@ async function fetchAllCommitData(token, username, days) {
 
   const fetchSince = days >= 365 ? since : yearAgo;
 
+  // Fetch contribution calendar (for accurate streak counting)
+  const calendar = await getContributionCalendar(gql, login, yearAgo, now);
+  console.log(`Contribution calendar: ${calendar.size} days loaded`);
+
   const repos = await getContributedRepos(gql, login, fetchSince, now);
   console.log(`Found ${repos.length} repositories with contributions`);
 
@@ -178,7 +215,7 @@ async function fetchAllCommitData(token, username, days) {
   }
 
   console.log(`Total commits fetched: ${allCommits.length}`);
-  return { login, commits: allCommits, since, now, yearAgo };
+  return { login, commits: allCommits, since, now, yearAgo, calendar };
 }
 
 module.exports = { fetchAllCommitData };

@@ -26706,9 +26706,36 @@ function fillDays(dayMap, from, to) {
 }
 
 /**
+ * Calculate streak from the contribution calendar (matches GitHub's green squares).
+ * Tolerates today being empty (not yet committed).
+ */
+function calculateStreakFromCalendar(calendar) {
+  if (!calendar || calendar.size === 0) return 0;
+
+  // Sort calendar dates descending
+  const dates = [...calendar.keys()].sort().reverse();
+
+  let streak = 0;
+  let started = false;
+  for (const date of dates) {
+    const count = calendar.get(date);
+    if (count > 0) {
+      started = true;
+      streak++;
+    } else if (!started) {
+      // Skip trailing empty days (today not yet committed)
+      continue;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/**
  * Calculate summary statistics.
  */
-function calculateStats(dailyData, allDailyData) {
+function calculateStats(dailyData, allDailyData, calendar) {
   const today = dailyData.length > 0 ? dailyData[dailyData.length - 1] : { additions: 0, deletions: 0 };
 
   const sum = (arr, key) => arr.reduce((s, d) => s + d[key], 0);
@@ -26738,21 +26765,21 @@ function calculateStats(dailyData, allDailyData) {
     }
   }
 
-  // Current streak from full year data (tolerating an empty "today")
-  let streak = 0;
-  let started = false;
-  for (let i = allDailyData.length - 1; i >= 0; i--) {
-    const hasActivity = allDailyData[i].additions > 0 || allDailyData[i].deletions > 0;
-    if (hasActivity) {
-      started = true;
-      streak++;
-    } else if (!started) {
-      // Skip trailing empty days (today not yet committed)
-      continue;
-    } else {
-      break;
-    }
-  }
+  // Use contribution calendar for streak if available (matches GitHub's green squares)
+  // Falls back to commit data if calendar not provided
+  const streak = calendar
+    ? calculateStreakFromCalendar(calendar)
+    : (() => {
+        let s = 0;
+        let started = false;
+        for (let i = allDailyData.length - 1; i >= 0; i--) {
+          const hasActivity = allDailyData[i].additions > 0 || allDailyData[i].deletions > 0;
+          if (hasActivity) { started = true; s++; }
+          else if (!started) { continue; }
+          else { break; }
+        }
+        return s;
+      })();
 
   return {
     today: { additions: today.additions, deletions: today.deletions },
@@ -26769,11 +26796,11 @@ function calculateStats(dailyData, allDailyData) {
 /**
  * Process raw commit data into chart-ready data.
  */
-function processData(commits, since, now, yearAgo) {
+function processData(commits, since, now, yearAgo, calendar) {
   const dayMap = aggregateByDay(commits);
   const chartData = fillDays(dayMap, since, now);
   const allData = fillDays(dayMap, yearAgo, now);
-  const stats = calculateStats(chartData, allData);
+  const stats = calculateStats(chartData, allData, calendar);
   return { chartData, stats };
 }
 
@@ -26921,6 +26948,39 @@ async function getRepoCommitStats(gql, owner, name, since, authorId) {
 }
 
 /**
+ * Fetch the contribution calendar (green squares) which includes ALL
+ * contributions across all branches, PRs, and repos.
+ * Returns a Map<string, number> of date -> contribution count.
+ */
+async function getContributionCalendar(gql, login, from, to) {
+  const { user } = await gql(
+    `query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { login, from: from.toISOString(), to: to.toISOString() }
+  );
+
+  const calendar = new Map();
+  for (const week of user.contributionsCollection.contributionCalendar.weeks) {
+    for (const day of week.contributionDays) {
+      calendar.set(day.date, day.contributionCount);
+    }
+  }
+  return calendar;
+}
+
+/**
  * Main entry: fetch all commit data for the user across contributed repos.
  * Returns raw array of { additions, deletions, date } objects.
  */
@@ -26954,6 +27014,10 @@ async function fetchAllCommitData(token, username, days) {
 
   const fetchSince = days >= 365 ? since : yearAgo;
 
+  // Fetch contribution calendar (for accurate streak counting)
+  const calendar = await getContributionCalendar(gql, login, yearAgo, now);
+  console.log(`Contribution calendar: ${calendar.size} days loaded`);
+
   const repos = await getContributedRepos(gql, login, fetchSince, now);
   console.log(`Found ${repos.length} repositories with contributions`);
 
@@ -26965,7 +27029,7 @@ async function fetchAllCommitData(token, username, days) {
   }
 
   console.log(`Total commits fetched: ${allCommits.length}`);
-  return { login, commits: allCommits, since, now, yearAgo };
+  return { login, commits: allCommits, since, now, yearAgo, calendar };
 }
 
 module.exports = { fetchAllCommitData };
@@ -29508,14 +29572,14 @@ async function run() {
     const animate = core.getInput("animations") !== "false";
 
     // Fetch data from GitHub
-    const { login, commits, since, now, yearAgo } = await fetchAllCommitData(
+    const { login, commits, since, now, yearAgo, calendar } = await fetchAllCommitData(
       token,
       username || undefined,
       period
     );
 
     // Process into chart data
-    const { chartData, stats } = processData(commits, since, now, yearAgo);
+    const { chartData, stats } = processData(commits, since, now, yearAgo, calendar);
 
     console.log(`\nStats for @${login}:`);
     console.log(`  Today:    +${stats.today.additions} / -${stats.today.deletions}`);

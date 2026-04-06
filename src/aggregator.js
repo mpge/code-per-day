@@ -46,9 +46,36 @@ function fillDays(dayMap, from, to) {
 }
 
 /**
+ * Calculate streak from the contribution calendar (matches GitHub's green squares).
+ * Tolerates today being empty (not yet committed).
+ */
+function calculateStreakFromCalendar(calendar) {
+  if (!calendar || calendar.size === 0) return 0;
+
+  // Sort calendar dates descending
+  const dates = [...calendar.keys()].sort().reverse();
+
+  let streak = 0;
+  let started = false;
+  for (const date of dates) {
+    const count = calendar.get(date);
+    if (count > 0) {
+      started = true;
+      streak++;
+    } else if (!started) {
+      // Skip trailing empty days (today not yet committed)
+      continue;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/**
  * Calculate summary statistics.
  */
-function calculateStats(dailyData, allDailyData) {
+function calculateStats(dailyData, allDailyData, calendar) {
   const today = dailyData.length > 0 ? dailyData[dailyData.length - 1] : { additions: 0, deletions: 0 };
 
   const sum = (arr, key) => arr.reduce((s, d) => s + d[key], 0);
@@ -78,21 +105,21 @@ function calculateStats(dailyData, allDailyData) {
     }
   }
 
-  // Current streak from full year data (tolerating an empty "today")
-  let streak = 0;
-  let started = false;
-  for (let i = allDailyData.length - 1; i >= 0; i--) {
-    const hasActivity = allDailyData[i].additions > 0 || allDailyData[i].deletions > 0;
-    if (hasActivity) {
-      started = true;
-      streak++;
-    } else if (!started) {
-      // Skip trailing empty days (today not yet committed)
-      continue;
-    } else {
-      break;
-    }
-  }
+  // Use contribution calendar for streak if available (matches GitHub's green squares)
+  // Falls back to commit data if calendar not provided
+  const streak = calendar
+    ? calculateStreakFromCalendar(calendar)
+    : (() => {
+        let s = 0;
+        let started = false;
+        for (let i = allDailyData.length - 1; i >= 0; i--) {
+          const hasActivity = allDailyData[i].additions > 0 || allDailyData[i].deletions > 0;
+          if (hasActivity) { started = true; s++; }
+          else if (!started) { continue; }
+          else { break; }
+        }
+        return s;
+      })();
 
   return {
     today: { additions: today.additions, deletions: today.deletions },
@@ -109,11 +136,11 @@ function calculateStats(dailyData, allDailyData) {
 /**
  * Process raw commit data into chart-ready data.
  */
-function processData(commits, since, now, yearAgo) {
+function processData(commits, since, now, yearAgo, calendar) {
   const dayMap = aggregateByDay(commits);
   const chartData = fillDays(dayMap, since, now);
   const allData = fillDays(dayMap, yearAgo, now);
-  const stats = calculateStats(chartData, allData);
+  const stats = calculateStats(chartData, allData, calendar);
   return { chartData, stats };
 }
 
