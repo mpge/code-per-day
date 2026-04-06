@@ -1,0 +1,47 @@
+name: 'Code Per Day'
+description: 'Generate beautiful SVG charts showing daily code additions and deletions'
+author: 'MPGE'
+branding:
+  icon: 'bar-chart-2'
+  color: 'green'
+
+inputs:
+  github_token:
+    description: 'GitHub token. Use a PAT with `repo` scope to include private repositories.'
+    required: true
+  username:
+    description: 'GitHub username (defaults to the authenticated user)'
+    required: false
+    default: ''
+  theme:
+    description: 'Chart theme (dark, light, dracula, tokyonight, nord, ocean, sunset, forest, midnight, radical, transparent, github-dark)'
+    required: false
+    default: 'dark'
+  period:
+    description: 'Number of days to chart (e.g. 30, 90, 365)'
+    required: false
+    default: '30'
+  output_path:
+    description: 'Output directory for generated SVG files'
+    required: false
+    default: './code-per-day'
+  all_themes:
+    description: 'Generate an SVG for every built-in theme'
+    required: false
+    default: 'false'
+  chart_type:
+    description: 'Chart style: bars, area'
+    required: false
+    default: 'bars'
+  animations:
+    description: 'Enable CSS entrance animations in the SVG'
+    required: false
+    default: 'true'
+
+outputs:
+  svg_path:
+    description: 'Path to the generated SVG file (or directory when all_themes is true)'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
