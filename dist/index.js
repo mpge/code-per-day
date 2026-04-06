@@ -26999,8 +26999,9 @@ function formatDateLabel(dateStr) {
 }
 
 /**
- * Compute a scale ceiling using the 90th percentile to prevent outliers
- * from crushing the chart. Returns a value that makes most bars readable.
+ * Compute a scale ceiling using IQR-based outlier detection.
+ * This prevents massive dependency/generated-file commits from
+ * crushing the chart and making normal coding days invisible.
  */
 function computeScaleCeiling(data) {
   const allVals = data
@@ -27009,12 +27010,24 @@ function computeScaleCeiling(data) {
     .sort((a, b) => a - b);
 
   if (allVals.length === 0) return 1;
-  if (allVals.length <= 2) return Math.max(...allVals, 1);
+  if (allVals.length <= 3) return Math.max(...allVals, 1);
 
-  const p90Index = Math.floor(allVals.length * 0.9);
-  const p90 = allVals[p90Index];
-  // Use 1.3x the 90th percentile as the ceiling so top bars have headroom
-  return Math.max(Math.ceil(p90 * 1.3), 1);
+  // IQR method: Q3 + 1.5 * IQR is the standard outlier fence
+  const q1 = allVals[Math.floor(allVals.length * 0.25)];
+  const q3 = allVals[Math.floor(allVals.length * 0.75)];
+  const iqr = q3 - q1;
+  const fence = q3 + 1.5 * iqr;
+
+  // Also compute the median for a safety floor
+  const median = allVals[Math.floor(allVals.length * 0.5)];
+  const medianCeiling = median * 5;
+
+  // Use whichever is higher between IQR fence and 5x median,
+  // but never exceed the 95th percentile * 1.5
+  const p95 = allVals[Math.floor(allVals.length * 0.95)];
+  const ceiling = Math.min(Math.max(fence, medianCeiling), p95 * 1.5);
+
+  return Math.max(Math.ceil(ceiling), 1);
 }
 
 /**
