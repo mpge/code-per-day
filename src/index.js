@@ -38,6 +38,14 @@ async function run() {
     console.log(`  Year Avg: +${stats.yearAvg.additions} / -${stats.yearAvg.deletions}`);
     console.log(`  Streak:   ${stats.streak} days`);
 
+    // Debug: show last 14 days of data
+    console.log(`\nDaily breakdown (last 14 days):`);
+    const tail = chartData.slice(-14);
+    for (const d of tail) {
+      const marker = (d.additions > 0 || d.deletions > 0) ? "  *" : "";
+      console.log(`  ${d.date}: +${d.additions} / -${d.deletions}${marker}`);
+    }
+
     // Ensure output directory
     fs.mkdirSync(outputPath, { recursive: true });
 
