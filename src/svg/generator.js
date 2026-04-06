@@ -5,7 +5,7 @@
 const { renderBarChart, renderAreaChart, formatNum } = require("./chart");
 
 const WIDTH = 840;
-const HEIGHT = 440;
+const HEIGHT = 460;
 const PADDING = 24;
 
 /**
@@ -104,7 +104,9 @@ function generateSVG(chartData, stats, login, theme, options = {}) {
 
   <!-- Header -->
   <g class="cpd-header">
-    <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
+    <a href="https://github.com/mpge/code-per-day" target="_blank">
+      <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
+    </a>
     <text x="${WIDTH - PADDING}" y="${headerY + 20}" fill="${theme.textSecondary}" font-size="13" font-family="'Segoe UI', sans-serif" text-anchor="end" font-weight="500">@${escapeXml(login)}</text>
   </g>
 
@@ -126,6 +128,11 @@ function generateSVG(chartData, stats, login, theme, options = {}) {
     <text x="${PADDING + 110}" y="${legendY + 4}" fill="${theme.text}" font-size="11" font-family="'Segoe UI', sans-serif">Deletions</text>
     <text x="${WIDTH - PADDING}" y="${legendY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last ${chartData.length} days · ${formatNum(stats.periodTotal.additions)} / ${formatNum(-stats.periodTotal.deletions)} lines</text>
   </g>
+
+  <!-- Get your own -->
+  <a href="https://github.com/mpge/code-per-day" target="_blank">
+    <text x="${WIDTH / 2}" y="${HEIGHT - 8}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle" opacity="0.6">Get your own — github.com/mpge/code-per-day</text>
+  </a>
 </svg>`;
 
   return svg;

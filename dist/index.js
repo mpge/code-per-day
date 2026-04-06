@@ -26999,6 +26999,25 @@ function formatDateLabel(dateStr) {
 }
 
 /**
+ * Compute a scale ceiling using the 90th percentile to prevent outliers
+ * from crushing the chart. Returns a value that makes most bars readable.
+ */
+function computeScaleCeiling(data) {
+  const allVals = data
+    .flatMap((d) => [d.additions, d.deletions])
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
+
+  if (allVals.length === 0) return 1;
+  if (allVals.length <= 2) return Math.max(...allVals, 1);
+
+  const p90Index = Math.floor(allVals.length * 0.9);
+  const p90 = allVals[p90Index];
+  // Use 1.3x the 90th percentile as the ceiling so top bars have headroom
+  return Math.max(Math.ceil(p90 * 1.3), 1);
+}
+
+/**
  * Generate the bar chart SVG content.
  */
 function renderBarChart(data, theme, opts) {
@@ -27006,9 +27025,7 @@ function renderBarChart(data, theme, opts) {
 
   if (data.length === 0) return "";
 
-  const maxAdd = Math.max(...data.map((d) => d.additions), 1);
-  const maxDel = Math.max(...data.map((d) => d.deletions), 1);
-  const maxVal = Math.max(maxAdd, maxDel);
+  const maxVal = computeScaleCeiling(data);
 
   const barGap = 2;
   const barWidth = Math.max(2, (chartW - barGap * data.length) / data.length);
@@ -27042,20 +27059,33 @@ function renderBarChart(data, theme, opts) {
 
     // Addition bar (goes up from middle)
     if (d.additions > 0) {
-      const h = (d.additions / maxVal) * halfH;
+      const capped = Math.min(d.additions, maxVal);
+      const h = (capped / maxVal) * halfH;
       const r = Math.min(barWidth / 2, 3);
-      bars += `<rect x="${x}" y="${midY - h}" width="${barWidth}" height="${h}" fill="${theme.additions}" rx="${r}" opacity="0.9">`;
-      bars += `<title>${d.date}: +${d.additions} additions</title>`;
+      const isOutlier = d.additions > maxVal;
+      bars += `<rect x="${x}" y="${midY - h}" width="${barWidth}" height="${h}" fill="${theme.additions}" rx="${r}" opacity="${isOutlier ? 1 : 0.9}">`;
+      bars += `<title>${d.date}: +${d.additions.toLocaleString("en-US")} additions</title>`;
       bars += `</rect>`;
+      if (isOutlier) {
+        // Small triangle marker at top of capped bar
+        const cx = x + barWidth / 2;
+        bars += `<polygon points="${cx - 4},${midY - h + 1} ${cx + 4},${midY - h + 1} ${cx},${midY - h - 5}" fill="${theme.additions}" opacity="0.7"/>`;
+      }
     }
 
     // Deletion bar (goes down from middle)
     if (d.deletions > 0) {
-      const h = (d.deletions / maxVal) * halfH;
+      const capped = Math.min(d.deletions, maxVal);
+      const h = (capped / maxVal) * halfH;
       const r = Math.min(barWidth / 2, 3);
-      bars += `<rect x="${x}" y="${midY}" width="${barWidth}" height="${h}" fill="${theme.deletions}" rx="${r}" opacity="0.9">`;
-      bars += `<title>${d.date}: -${d.deletions} deletions</title>`;
+      const isOutlier = d.deletions > maxVal;
+      bars += `<rect x="${x}" y="${midY}" width="${barWidth}" height="${h}" fill="${theme.deletions}" rx="${r}" opacity="${isOutlier ? 1 : 0.9}">`;
+      bars += `<title>${d.date}: -${d.deletions.toLocaleString("en-US")} deletions</title>`;
       bars += `</rect>`;
+      if (isOutlier) {
+        const cx = x + barWidth / 2;
+        bars += `<polygon points="${cx - 4},${midY + h - 1} ${cx + 4},${midY + h - 1} ${cx},${midY + h + 5}" fill="${theme.deletions}" opacity="0.7"/>`;
+      }
     }
 
     // Date labels (every ~7 days or so)
@@ -27076,9 +27106,7 @@ function renderAreaChart(data, theme, opts) {
 
   if (data.length === 0) return "";
 
-  const maxAdd = Math.max(...data.map((d) => d.additions), 1);
-  const maxDel = Math.max(...data.map((d) => d.deletions), 1);
-  const maxVal = Math.max(maxAdd, maxDel);
+  const maxVal = computeScaleCeiling(data);
 
   const midY = chartY + chartH / 2;
   const halfH = chartH / 2 - 10;
@@ -27106,7 +27134,8 @@ function renderAreaChart(data, theme, opts) {
   let addLine = `M ${chartX} ${midY}`;
   for (let i = 0; i < data.length; i++) {
     const x = chartX + i * step;
-    const y = midY - (data[i].additions / maxVal) * halfH;
+    const capped = Math.min(data[i].additions, maxVal);
+    const y = midY - (capped / maxVal) * halfH;
     addPath += ` L ${x} ${y}`;
     addLine += ` L ${x} ${y}`;
   }
@@ -27117,7 +27146,8 @@ function renderAreaChart(data, theme, opts) {
   let delLine = `M ${chartX} ${midY}`;
   for (let i = 0; i < data.length; i++) {
     const x = chartX + i * step;
-    const y = midY + (data[i].deletions / maxVal) * halfH;
+    const capped = Math.min(data[i].deletions, maxVal);
+    const y = midY + (capped / maxVal) * halfH;
     delPath += ` L ${x} ${y}`;
     delLine += ` L ${x} ${y}`;
   }
@@ -27155,7 +27185,7 @@ module.exports = { renderBarChart, renderAreaChart, formatNum, formatDateLabel }
 const { renderBarChart, renderAreaChart, formatNum } = __nccwpck_require__(200);
 
 const WIDTH = 840;
-const HEIGHT = 440;
+const HEIGHT = 460;
 const PADDING = 24;
 
 /**
@@ -27254,7 +27284,9 @@ function generateSVG(chartData, stats, login, theme, options = {}) {
 
   <!-- Header -->
   <g class="cpd-header">
-    <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
+    <a href="https://github.com/mpge/code-per-day" target="_blank">
+      <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
+    </a>
     <text x="${WIDTH - PADDING}" y="${headerY + 20}" fill="${theme.textSecondary}" font-size="13" font-family="'Segoe UI', sans-serif" text-anchor="end" font-weight="500">@${escapeXml(login)}</text>
   </g>
 
@@ -27276,6 +27308,11 @@ function generateSVG(chartData, stats, login, theme, options = {}) {
     <text x="${PADDING + 110}" y="${legendY + 4}" fill="${theme.text}" font-size="11" font-family="'Segoe UI', sans-serif">Deletions</text>
     <text x="${WIDTH - PADDING}" y="${legendY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last ${chartData.length} days · ${formatNum(stats.periodTotal.additions)} / ${formatNum(-stats.periodTotal.deletions)} lines</text>
   </g>
+
+  <!-- Get your own -->
+  <a href="https://github.com/mpge/code-per-day" target="_blank">
+    <text x="${WIDTH / 2}" y="${HEIGHT - 8}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle" opacity="0.6">Get your own — github.com/mpge/code-per-day</text>
+  </a>
 </svg>`;
 
   return svg;
