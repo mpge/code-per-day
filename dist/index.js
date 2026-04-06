@@ -26738,11 +26738,17 @@ function calculateStats(dailyData, allDailyData) {
     }
   }
 
-  // Current streak (consecutive days with commits from the end)
+  // Current streak from full year data (tolerating an empty "today")
   let streak = 0;
-  for (let i = dailyData.length - 1; i >= 0; i--) {
-    if (dailyData[i].additions > 0 || dailyData[i].deletions > 0) {
+  let started = false;
+  for (let i = allDailyData.length - 1; i >= 0; i--) {
+    const hasActivity = allDailyData[i].additions > 0 || allDailyData[i].deletions > 0;
+    if (hasActivity) {
+      started = true;
       streak++;
+    } else if (!started) {
+      // Skip trailing empty days (today not yet committed)
+      continue;
     } else {
       break;
     }
