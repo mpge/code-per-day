@@ -91,9 +91,32 @@ jobs:
 
 ### 4. Embed in your README
 
+Add this to your profile `README.md`. The image links back to this repo so visitors can get their own:
+
+```html
+<p align="center">
+  <a href="https://github.com/mpge/code-per-day" target="_blank">
+    <img src="./code-per-day/code-per-day-dark.svg" alt="Code Per Day" />
+  </a>
+</p>
+```
+
+Or in plain Markdown (without the link wrapper):
+
 ```markdown
 ![Code Per Day](./code-per-day/code-per-day-dark.svg)
 ```
+
+### 5. Run it
+
+Trigger the workflow manually to generate your first chart:
+
+1. Go to your profile repo on GitHub
+2. Click **Actions** > **Code Per Day** > **Run workflow**
+3. Wait for it to complete — your SVGs will be committed to the `code-per-day/` directory
+4. Your README will now display the chart
+
+After the first run, the workflow runs automatically every day at 4 AM UTC.
 
 ## Inputs
 
