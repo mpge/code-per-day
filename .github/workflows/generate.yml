@@ -18,7 +18,7 @@ jobs:
       - name: Generate Code Per Day chart
         uses: mpge/code-per-day@v1
         with:
-          github_token: ${{ secrets.CPD_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           theme: dark
           period: "30"
           output_path: ./code-per-day
