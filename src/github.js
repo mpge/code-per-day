@@ -25,7 +25,9 @@ async function getAuthenticatedUser(gql) {
 
 /**
  * Get repositories the user contributed to within a date range.
- * Uses contributionsCollection so it includes private repos the token can see.
+ * Uses contributionsCollection - note this filters out repos the GitHub
+ * privacy model classifies as "restricted contributions" (typically private
+ * repos, even with a repo-scope token). getAccessibleRepos backfills those.
  */
 async function getContributedRepos(gql, login, from, to) {
   const repos = [];
@@ -64,6 +66,76 @@ async function getContributedRepos(gql, login, from, to) {
   }
 
   return repos;
+}
+
+/**
+ * Enumerate repositories the token can read directly (owned, collaborator,
+ * or via org membership), filtered to ones pushed within the window.
+ * Covers private repos that contributionsCollection silently drops.
+ * Only runs when username is not overridden (token owner == target user).
+ */
+async function getAccessibleRepos(gql, since) {
+  const repos = [];
+  let cursor = null;
+  let hasNext = true;
+
+  while (hasNext) {
+    const result = await gql(
+      `query($cursor: String) {
+        viewer {
+          repositories(
+            first: 100,
+            after: $cursor,
+            affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
+            orderBy: { field: PUSHED_AT, direction: DESC }
+          ) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              nameWithOwner
+              name
+              owner { login }
+              defaultBranchRef { name }
+              isPrivate
+              pushedAt
+            }
+          }
+        }
+      }`,
+      { cursor }
+    );
+
+    const page = result.viewer.repositories;
+    for (const repo of page.nodes) {
+      if (!repo.defaultBranchRef) continue;
+      if (!repo.pushedAt || new Date(repo.pushedAt) < since) {
+        // Ordered by PUSHED_AT desc, so once we cross the boundary we can stop
+        return repos;
+      }
+      repos.push({
+        owner: repo.owner.login,
+        name: repo.name,
+        nameWithOwner: repo.nameWithOwner,
+        branch: repo.defaultBranchRef.name,
+        isPrivate: repo.isPrivate,
+        totalCommits: null,
+      });
+    }
+
+    hasNext = page.pageInfo.hasNextPage;
+    cursor = page.pageInfo.endCursor;
+  }
+
+  return repos;
+}
+
+/**
+ * Merge two repo lists, deduping by nameWithOwner.
+ */
+function mergeRepoLists(a, b) {
+  const seen = new Map();
+  for (const r of a) seen.set(r.nameWithOwner, r);
+  for (const r of b) if (!seen.has(r.nameWithOwner)) seen.set(r.nameWithOwner, r);
+  return Array.from(seen.values());
 }
 
 /**
@@ -340,13 +412,25 @@ async function fetchAllCommitData(token, username, days) {
   const calendar = await getContributionCalendar(gql, login, yearAgo, now);
   console.log(`Contribution calendar: ${calendar.size} days loaded`);
 
-  const repos = await getContributedRepos(gql, login, fetchSince, now);
-  console.log(`Found ${repos.length} repositories with contributions`);
+  const contributed = await getContributedRepos(gql, login, fetchSince, now);
+  console.log(`contributionsCollection found ${contributed.length} repos`);
+
+  // contributionsCollection filters out "restricted" (usually private) contributions
+  // even with a repo-scope token. When querying self, backfill by enumerating
+  // every repo the token can read directly, then filter commits by author later.
+  let repos = contributed;
+  if (!username) {
+    const accessible = await getAccessibleRepos(gql, fetchSince);
+    console.log(`viewer.repositories added ${accessible.length} accessible repos`);
+    repos = mergeRepoLists(contributed, accessible);
+    console.log(`Merged repo list: ${repos.length} unique repos`);
+  }
 
   // Fetch commit stats from each repo (client-side author filtering)
   const allCommits = [];
   for (const repo of repos) {
-    console.log(`  Fetching ${repo.nameWithOwner} (${repo.totalCommits} commits)...`);
+    const hint = repo.totalCommits != null ? ` (${repo.totalCommits} total)` : "";
+    console.log(`  Fetching ${repo.nameWithOwner}${hint}...`);
     const commits = await getRepoCommitStats(gql, repo.owner, repo.name, fetchSince, id, login);
     allCommits.push(...commits);
   }

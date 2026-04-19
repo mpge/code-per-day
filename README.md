@@ -168,6 +168,18 @@ Vertical bars — additions rise above the baseline, deletions fall below.
 ### Area
 Smooth filled area chart with the same above/below layout.
 
+## Limitations
+
+Counts come from the GitHub API, which applies its own privacy filters. Expect gaps in these cases:
+
+- **Private contributions are not always exposed.** GitHub's `contributionsCollection` field — the primary source of "which repos did you commit to" — silently drops contributions it classifies as restricted, even when the token has `repo` scope. When running against the token owner (no `username` override), this action backfills by enumerating every repo the token can read directly. When `username` is set to someone else, only repos GitHub exposes on their public profile are visible.
+- **"Include private contributions on my profile"** must be enabled at https://github.com/settings/profile for private repo activity to surface at all on the authenticated user's own profile.
+- **SAML SSO orgs require token authorization.** For a classic PAT, visit Settings → Personal access tokens → *your token* → **Configure SSO** and authorize every org whose private repos you want counted. Without this, contributions to those orgs land in `restrictedContributionsCount` and never reach this action.
+- **Fine-grained PATs** are only partially supported. They work for public repos and personal private repos, but most orgs have not enabled fine-grained PAT access, and commit history in those org repos will be invisible. Use a classic PAT with `repo` scope for full coverage.
+- **Org-enforced member privacy** cannot be worked around. If an org admin has restricted contribution visibility at the org level, neither the GraphQL API nor any token scope can expose those commits — the filter runs server-side.
+- **External collaborator repos** only appear when the token has read access or when GitHub attributed your commit to the repo's public contribution graph. Repos you've never been granted access to will be missing.
+- **Commits without linked GitHub identity.** If a commit was authored with an email that isn't verified on your GitHub account, matching falls back to noreply patterns and git author name; commits with no link to your login at all will be skipped.
+
 ## License
 
 MIT
