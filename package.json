@@ -1,6 +1,6 @@
 {
   "name": "code-per-day",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GitHub Action that generates beautiful SVG charts showing your daily code additions and deletions",
   "main": "dist/index.js",
   "scripts": {
