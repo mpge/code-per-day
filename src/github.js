@@ -336,11 +336,12 @@ function mergeCommitAndPRStats(commits, prStats) {
   for (const c of commits) {
     const dateKey = c.date.slice(0, 10);
     if (!commitsByDate.has(dateKey)) {
-      commitsByDate.set(dateKey, { additions: 0, deletions: 0 });
+      commitsByDate.set(dateKey, { additions: 0, deletions: 0, commits: 0 });
     }
     const entry = commitsByDate.get(dateKey);
     entry.additions += c.additions;
     entry.deletions += c.deletions;
+    entry.commits += 1;
   }
 
   // Group PRs by merge date
@@ -361,12 +362,13 @@ function mergeCommitAndPRStats(commits, prStats) {
   const merged = [];
 
   for (const dateKey of allDates) {
-    const commitData = commitsByDate.get(dateKey) || { additions: 0, deletions: 0 };
+    const commitData = commitsByDate.get(dateKey) || { additions: 0, deletions: 0, commits: 0 };
     const prData = prsByDate.get(dateKey) || { additions: 0, deletions: 0 };
 
     merged.push({
       additions: Math.max(commitData.additions, prData.additions),
       deletions: Math.max(commitData.deletions, prData.deletions),
+      commits: commitData.commits,
       date: `${dateKey}T12:00:00Z`,
     });
   }

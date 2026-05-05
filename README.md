@@ -1,6 +1,6 @@
 # Code Per Day
 
-A GitHub Action that generates beautiful SVG charts showing your daily code additions and deletions. Embed them in your profile README for a visual breakdown of your coding activity.
+A GitHub Action that generates beautiful SVG charts showing your daily code additions/deletions and daily commit counts. Embed them in your profile README for a visual breakdown of your coding activity.
 
 Uses the GitHub GraphQL API to fetch commit data across all repositories you've contributed to — including private repos when you provide a PAT with `repo` scope. **Only additions and deletions counts are exposed — no file names, repo names, or code content.**
 
@@ -79,6 +79,7 @@ jobs:
           theme: dark
           period: "30"
           output_path: ./code-per-day
+          image_types: "code,commits"
           all_themes: "false"
 
       - name: Commit
@@ -99,12 +100,19 @@ Add this to your profile `README.md`. The image links back to this repo so visit
     <img src="./code-per-day/code-per-day-dark.svg" alt="Code Per Day" />
   </a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/mpge/code-per-day" target="_blank">
+    <img src="./code-per-day/commits-per-day-dark.svg" alt="Commits Per Day" />
+  </a>
+</p>
 ```
 
 Or in plain Markdown (without the link wrapper):
 
 ```markdown
 ![Code Per Day](./code-per-day/code-per-day-dark.svg)
+![Commits Per Day](./code-per-day/commits-per-day-dark.svg)
 ```
 
 ### 5. Run it
@@ -129,7 +137,13 @@ After the first run, the workflow runs automatically every day at 4 AM UTC.
 | `output_path` | `./code-per-day` | Output directory for SVG files |
 | `all_themes` | `false` | Generate an SVG for every built-in theme |
 | `chart_type` | `bars` | Chart style: `bars` or `area` |
+| `image_types` | `code` | Image families to generate: `code`, `commits`, or `all` |
 | `animations` | `true` | Enable CSS entrance animations |
+
+Generated filenames:
+
+- `code-per-day-<theme>.svg` for additions/deletions charts
+- `commits-per-day-<theme>.svg` for commit-count charts
 
 ## Themes
 
@@ -167,6 +181,14 @@ Vertical bars — additions rise above the baseline, deletions fall below.
 
 ### Area
 Smooth filled area chart with the same above/below layout.
+
+## Image Types
+
+### Code
+The original additions/deletions chart. Supports both `bars` and `area`.
+
+### Commits
+A separate commit-count chart rendered as its own SVG. This ignores `chart_type` and always renders a single-series commit histogram.
 
 ## Limitations
 

@@ -26671,15 +26671,16 @@ function toDateKey(d) {
 
 /**
  * Aggregate raw commit data into per-day totals.
- * Returns a Map<string, { additions, deletions }> keyed by YYYY-MM-DD.
+ * Returns a Map<string, { additions, deletions, commits }> keyed by YYYY-MM-DD.
  */
 function aggregateByDay(commits) {
   const map = new Map();
   for (const c of commits) {
     const key = toDateKey(new Date(c.date));
-    const entry = map.get(key) || { additions: 0, deletions: 0 };
+    const entry = map.get(key) || { additions: 0, deletions: 0, commits: 0 };
     entry.additions += c.additions;
     entry.deletions += c.deletions;
+    entry.commits += c.commits || 1;
     map.set(key, entry);
   }
   return map;
@@ -26697,7 +26698,7 @@ function fillDays(dayMap, from, to) {
 
   while (current <= end) {
     const key = toDateKey(current);
-    const entry = dayMap.get(key) || { additions: 0, deletions: 0 };
+    const entry = dayMap.get(key) || { additions: 0, deletions: 0, commits: 0 };
     result.push({ date: key, ...entry });
     current.setDate(current.getDate() + 1);
   }
@@ -26736,7 +26737,9 @@ function calculateStreakFromCalendar(calendar) {
  * Calculate summary statistics.
  */
 function calculateStats(dailyData, allDailyData, calendar) {
-  const today = dailyData.length > 0 ? dailyData[dailyData.length - 1] : { additions: 0, deletions: 0 };
+  const today = dailyData.length > 0
+    ? dailyData[dailyData.length - 1]
+    : { additions: 0, deletions: 0, commits: 0 };
 
   const sum = (arr, key) => arr.reduce((s, d) => s + d[key], 0);
   const avg = (arr, key) => arr.length > 0 ? Math.round(sum(arr, key) / arr.length) : 0;
@@ -26744,24 +26747,35 @@ function calculateStats(dailyData, allDailyData, calendar) {
   // Period average (the charted days)
   const periodAvgAdd = avg(dailyData, "additions");
   const periodAvgDel = avg(dailyData, "deletions");
+  const periodAvgCommits = avg(dailyData, "commits");
 
   // Yearly average (all data)
   const yearAvgAdd = avg(allDailyData, "additions");
   const yearAvgDel = avg(allDailyData, "deletions");
+  const yearAvgCommits = avg(allDailyData, "commits");
 
   // Period totals
   const periodTotalAdd = sum(dailyData, "additions");
   const periodTotalDel = sum(dailyData, "deletions");
+  const periodTotalCommits = sum(dailyData, "commits");
 
   // Yearly totals
   const yearTotalAdd = sum(allDailyData, "additions");
   const yearTotalDel = sum(allDailyData, "deletions");
+  const yearTotalCommits = sum(allDailyData, "commits");
 
   // Busiest day
-  let busiestDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0 };
+  let busiestDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0, commits: 0 };
   for (const d of dailyData) {
     if (d.additions + d.deletions > busiestDay.additions + busiestDay.deletions) {
       busiestDay = d;
+    }
+  }
+
+  let mostCommitsDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0, commits: 0 };
+  for (const d of dailyData) {
+    if (d.commits > mostCommitsDay.commits) {
+      mostCommitsDay = d;
     }
   }
 
@@ -26782,12 +26796,13 @@ function calculateStats(dailyData, allDailyData, calendar) {
       })();
 
   return {
-    today: { additions: today.additions, deletions: today.deletions },
-    periodAvg: { additions: periodAvgAdd, deletions: periodAvgDel },
-    yearAvg: { additions: yearAvgAdd, deletions: yearAvgDel },
-    periodTotal: { additions: periodTotalAdd, deletions: periodTotalDel },
-    yearTotal: { additions: yearTotalAdd, deletions: yearTotalDel },
+    today: { additions: today.additions, deletions: today.deletions, commits: today.commits },
+    periodAvg: { additions: periodAvgAdd, deletions: periodAvgDel, commits: periodAvgCommits },
+    yearAvg: { additions: yearAvgAdd, deletions: yearAvgDel, commits: yearAvgCommits },
+    periodTotal: { additions: periodTotalAdd, deletions: periodTotalDel, commits: periodTotalCommits },
+    yearTotal: { additions: yearTotalAdd, deletions: yearTotalDel, commits: yearTotalCommits },
     busiestDay,
+    mostCommitsDay,
     streak,
     periodDays: dailyData.length,
   };
@@ -27150,11 +27165,12 @@ function mergeCommitAndPRStats(commits, prStats) {
   for (const c of commits) {
     const dateKey = c.date.slice(0, 10);
     if (!commitsByDate.has(dateKey)) {
-      commitsByDate.set(dateKey, { additions: 0, deletions: 0 });
+      commitsByDate.set(dateKey, { additions: 0, deletions: 0, commits: 0 });
     }
     const entry = commitsByDate.get(dateKey);
     entry.additions += c.additions;
     entry.deletions += c.deletions;
+    entry.commits += 1;
   }
 
   // Group PRs by merge date
@@ -27175,12 +27191,13 @@ function mergeCommitAndPRStats(commits, prStats) {
   const merged = [];
 
   for (const dateKey of allDates) {
-    const commitData = commitsByDate.get(dateKey) || { additions: 0, deletions: 0 };
+    const commitData = commitsByDate.get(dateKey) || { additions: 0, deletions: 0, commits: 0 };
     const prData = prsByDate.get(dateKey) || { additions: 0, deletions: 0 };
 
     merged.push({
       additions: Math.max(commitData.additions, prData.additions),
       deletions: Math.max(commitData.deletions, prData.deletions),
+      commits: commitData.commits,
       date: `${dateKey}T12:00:00Z`,
     });
   }
@@ -27264,6 +27281,133 @@ async function fetchAllCommitData(token, username, days) {
 }
 
 module.exports = { fetchAllCommitData };
+
+
+/***/ }),
+
+/***/ 5105:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Code Per Day - GitHub Action
+// Author: MPGE (https://github.com/mpge)
+// Licensed under MIT
+
+const core = __nccwpck_require__(7484);
+const fs = __nccwpck_require__(9896);
+const path = __nccwpck_require__(6928);
+const { fetchAllCommitData } = __nccwpck_require__(6474);
+const { processData } = __nccwpck_require__(1672);
+const { generateSVG } = __nccwpck_require__(1989);
+const { getTheme, getAllThemeNames } = __nccwpck_require__(7840);
+
+function parseImageTypes(value) {
+  const requested = String(value || "code")
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+
+  const normalized = [];
+  for (const type of requested) {
+    if (type === "all") {
+      normalized.push("code", "commits");
+    } else if (type === "code" || type === "commits") {
+      normalized.push(type);
+    } else {
+      throw new Error(`Unsupported image type: ${type}`);
+    }
+  }
+
+  return [...new Set(normalized.length > 0 ? normalized : ["code"])];
+}
+
+function getOutputFileName(imageType, themeName) {
+  return imageType === "commits"
+    ? `commits-per-day-${themeName}.svg`
+    : `code-per-day-${themeName}.svg`;
+}
+
+async function run() {
+  try {
+    // Read inputs
+    const token = core.getInput("github_token", { required: true });
+    const username = core.getInput("username") || "";
+    const themeName = core.getInput("theme") || "dark";
+    const period = parseInt(core.getInput("period") || "30", 10);
+    const outputPath = core.getInput("output_path") || "./code-per-day";
+    const allThemes = core.getInput("all_themes") === "true";
+    const chartType = core.getInput("chart_type") || "bars";
+    const animate = core.getInput("animations") !== "false";
+    const imageTypes = parseImageTypes(core.getInput("image_types") || "code");
+
+    // Fetch data from GitHub
+    const { login, commits, since, now, yearAgo, calendar } = await fetchAllCommitData(
+      token,
+      username || undefined,
+      period
+    );
+
+    // Process into chart data
+    const { chartData, stats } = processData(commits, since, now, yearAgo, calendar);
+
+    console.log(`\nStats for @${login}:`);
+    console.log(`  Today:    +${stats.today.additions} / -${stats.today.deletions}`);
+    console.log(`  Commits:  ${stats.today.commits} today`);
+    console.log(`  ${period}d Avg: +${stats.periodAvg.additions} / -${stats.periodAvg.deletions}`);
+    console.log(`  ${period}d Commit Avg: ${stats.periodAvg.commits}`);
+    console.log(`  Year Avg: +${stats.yearAvg.additions} / -${stats.yearAvg.deletions}`);
+    console.log(`  Year Commit Avg: ${stats.yearAvg.commits}`);
+    console.log(`  Streak:   ${stats.streak} days`);
+
+    // Debug: show last 14 days of data
+    console.log(`\nDaily breakdown (last 14 days):`);
+    const tail = chartData.slice(-14);
+    for (const d of tail) {
+      const marker = (d.additions > 0 || d.deletions > 0) ? "  *" : "";
+      console.log(`  ${d.date}: +${d.additions} / -${d.deletions}${marker}`);
+    }
+
+    // Ensure output directory
+    fs.mkdirSync(outputPath, { recursive: true });
+
+    const options = { chartType, animate, periodDays: period };
+
+    if (allThemes) {
+      // Generate one SVG per theme
+      for (const name of getAllThemeNames()) {
+        const theme = getTheme(name);
+        for (const imageType of imageTypes) {
+          const svg = generateSVG(chartData, stats, login, theme, { ...options, imageType });
+          const filePath = path.join(outputPath, getOutputFileName(imageType, name));
+          fs.writeFileSync(filePath, svg, "utf8");
+          console.log(`Generated: ${filePath}`);
+        }
+      }
+      core.setOutput("svg_path", outputPath);
+    } else {
+      // Generate single SVG
+      const theme = getTheme(themeName);
+      let lastFilePath = null;
+      for (const imageType of imageTypes) {
+        const svg = generateSVG(chartData, stats, login, theme, { ...options, imageType });
+        const filePath = path.join(outputPath, getOutputFileName(imageType, themeName));
+        fs.writeFileSync(filePath, svg, "utf8");
+        console.log(`Generated: ${filePath}`);
+        lastFilePath = filePath;
+      }
+      core.setOutput("svg_path", imageTypes.length === 1 ? lastFilePath : outputPath);
+    }
+
+    console.log("Done!");
+  } catch (err) {
+    core.setFailed(err.message);
+  }
+}
+
+module.exports = { parseImageTypes, getOutputFileName, run };
+
+if (require.main === require.cache[eval('__filename')]) {
+  run();
+}
 
 
 /***/ }),
@@ -27483,6 +27627,97 @@ module.exports = { renderBarChart, renderAreaChart, formatNum, formatDateLabel }
 
 /***/ }),
 
+/***/ 6791:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Code Per Day - GitHub Action
+// Author: MPGE (https://github.com/mpge)
+// Licensed under MIT
+
+const { formatDateLabel } = __nccwpck_require__(200);
+
+function formatCount(n) {
+  return Math.max(0, n).toLocaleString("en-US");
+}
+
+function computeCommitScaleCeiling(data) {
+  const values = data
+    .map((d) => d.commits || 0)
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
+
+  if (values.length === 0) return 1;
+  if (values.length <= 3) return Math.max(...values, 1);
+
+  const q1 = values[Math.floor(values.length * 0.25)];
+  const q3 = values[Math.floor(values.length * 0.75)];
+  const iqr = q3 - q1;
+  const fence = q3 + 1.5 * iqr;
+  const median = values[Math.floor(values.length * 0.5)];
+  const p95 = values[Math.floor(values.length * 0.95)];
+  const ceiling = Math.min(Math.max(fence, median * 4), p95 * 1.5);
+
+  return Math.max(Math.ceil(ceiling), 1);
+}
+
+function renderCommitChart(data, theme, opts) {
+  const { chartX, chartY, chartW, chartH } = opts;
+
+  if (data.length === 0) return "";
+
+  const maxVal = computeCommitScaleCeiling(data);
+  const barGap = 2;
+  const barWidth = Math.max(2, (chartW - barGap * data.length) / data.length);
+  const usableH = chartH - 20;
+  const baselineY = chartY + usableH;
+
+  let svg = "";
+  let labels = "";
+
+  for (let i = 0; i <= 4; i++) {
+    const y = chartY + (usableH / 4) * i;
+    svg += `<line x1="${chartX}" y1="${y}" x2="${chartX + chartW}" y2="${y}" stroke="${theme.gridLine}" stroke-width="1" stroke-dasharray="4,4"/>`;
+  }
+
+  svg += `<line x1="${chartX}" y1="${baselineY}" x2="${chartX + chartW}" y2="${baselineY}" stroke="${theme.border}" stroke-width="1.5"/>`;
+  svg += `<text x="${chartX - 8}" y="${chartY + 14}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">${formatCount(maxVal)}</text>`;
+  svg += `<text x="${chartX - 8}" y="${baselineY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">0</text>`;
+
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i];
+    const x = chartX + i * (barWidth + barGap);
+
+    if (d.commits > 0) {
+      const capped = Math.min(d.commits, maxVal);
+      const h = (capped / maxVal) * usableH;
+      const y = baselineY - h;
+      const r = Math.min(barWidth / 2, 3);
+      const isOutlier = d.commits > maxVal;
+
+      svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${h}" fill="${theme.accent}" rx="${r}" opacity="${isOutlier ? 1 : 0.9}">`;
+      svg += `<title>${d.date}: ${formatCount(d.commits)} commits</title>`;
+      svg += `</rect>`;
+
+      if (isOutlier) {
+        const cx = x + barWidth / 2;
+        svg += `<polygon points="${cx - 4},${y + 1} ${cx + 4},${y + 1} ${cx},${y - 5}" fill="${theme.accent}" opacity="0.7"/>`;
+      }
+    }
+
+    const labelInterval = Math.max(1, Math.floor(data.length / 6));
+    if (i % labelInterval === 0 || i === data.length - 1) {
+      labels += `<text x="${x + barWidth / 2}" y="${chartY + chartH + 16}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle">${formatDateLabel(d.date)}</text>`;
+    }
+  }
+
+  return svg + labels;
+}
+
+module.exports = { renderCommitChart };
+
+
+/***/ }),
+
 /***/ 1989:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -27491,14 +27726,12 @@ module.exports = { renderBarChart, renderAreaChart, formatNum, formatDateLabel }
 // Licensed under MIT
 
 const { renderBarChart, renderAreaChart, formatNum } = __nccwpck_require__(200);
+const { renderCommitChart } = __nccwpck_require__(6791);
 
 const WIDTH = 840;
 const HEIGHT = 460;
 const PADDING = 24;
 
-/**
- * Render a stat card (the small summary boxes at the top).
- */
 function renderStatCard(x, y, w, h, label, addVal, delVal, theme) {
   const rx = 8;
   return `
@@ -27508,9 +27741,15 @@ function renderStatCard(x, y, w, h, label, addVal, delVal, theme) {
     <text x="${x + w / 2}" y="${y + 58}" fill="${theme.deletions}" font-size="14" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="600">${formatNum(-delVal)}</text>`;
 }
 
-/**
- * Generate CSS animations.
- */
+function renderSingleValueStatCard(x, y, w, h, label, value, suffix, theme) {
+  const rx = 8;
+  return `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${theme.statCardBg}" stroke="${theme.border}" stroke-width="1"/>
+    <text x="${x + w / 2}" y="${y + 18}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">${label}</text>
+    <text x="${x + w / 2}" y="${y + 44}" fill="${theme.accent}" font-size="20" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">${value.toLocaleString("en-US")}</text>
+    <text x="${x + w / 2}" y="${y + 60}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle">${suffix}</text>`;
+}
+
 function renderAnimations(animate) {
   if (!animate) return "";
   return `
@@ -27530,15 +27769,19 @@ function renderAnimations(animate) {
     </style>`;
 }
 
-/**
- * Generate the full SVG string.
- */
-function generateSVG(chartData, stats, login, theme, options = {}) {
-  const { chartType = "bars", animate = true, periodDays = 30 } = options;
+function renderStreakCard(x, y, w, h, streak, theme) {
+  return `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${theme.statCardBg}" stroke="${theme.border}" stroke-width="1"/>
+    <text x="${x + w / 2}" y="${y + 18}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">Streak</text>
+    <text x="${x + w / 2}" y="${y + 44}" fill="${theme.accent}" font-size="20" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">${streak}</text>
+    <text x="${x + w / 2}" y="${y + 60}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle">days</text>`;
+}
 
+function generateSVG(chartData, stats, login, theme, options = {}) {
+  const { chartType = "bars", animate = true, periodDays = 30, imageType = "code" } = options;
+  const isCommitChart = imageType === "commits";
   const periodLabel = periodDays <= 30 ? "30d Avg" : periodDays <= 90 ? "90d Avg" : "Year Avg";
 
-  // Layout
   const headerY = PADDING;
   const statsY = headerY + 36;
   const statsH = 68;
@@ -27547,83 +27790,82 @@ function generateSVG(chartData, stats, login, theme, options = {}) {
   const chartX = PADDING + 48;
   const chartW = WIDTH - PADDING * 2 - 56;
 
-  // Stat cards
   const cardW = (chartW + 48 - 24) / 4;
   const cardGap = 8;
-  const statCards = [
-    { label: "Today", add: stats.today.additions, del: stats.today.deletions },
-    { label: periodLabel, add: stats.periodAvg.additions, del: stats.periodAvg.deletions },
-    { label: "Year Avg", add: stats.yearAvg.additions, del: stats.yearAvg.deletions },
-    { label: `Streak`, add: stats.streak, del: 0, isStreak: true },
-  ];
 
   let statsSvg = "";
-  for (let i = 0; i < statCards.length; i++) {
-    const card = statCards[i];
+  for (let i = 0; i < 4; i++) {
     const x = PADDING + i * (cardW + cardGap);
-
-    if (card.isStreak) {
-      // Special streak card
-      statsSvg += `
-        <rect x="${x}" y="${statsY}" width="${cardW}" height="${statsH}" rx="8" fill="${theme.statCardBg}" stroke="${theme.border}" stroke-width="1"/>
-        <text x="${x + cardW / 2}" y="${statsY + 18}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle" font-weight="500">Streak</text>
-        <text x="${x + cardW / 2}" y="${statsY + 44}" fill="${theme.accent}" font-size="20" font-family="'Segoe UI Mono', 'Cascadia Code', monospace" text-anchor="middle" font-weight="700">${card.add}</text>
-        <text x="${x + cardW / 2}" y="${statsY + 60}" fill="${theme.textSecondary}" font-size="11" font-family="'Segoe UI', sans-serif" text-anchor="middle">days</text>`;
+    if (isCommitChart) {
+      const commitCards = [
+        { label: "Today", value: stats.today.commits, suffix: "commits" },
+        { label: periodLabel, value: stats.periodAvg.commits, suffix: "avg/day" },
+        { label: "Year Avg", value: stats.yearAvg.commits, suffix: "avg/day" },
+        { label: "Best Day", value: stats.mostCommitsDay.commits, suffix: "commits" },
+      ];
+      const card = commitCards[i];
+      statsSvg += renderSingleValueStatCard(x, statsY, cardW, statsH, card.label, card.value, card.suffix, theme);
+    } else if (i === 3) {
+      statsSvg += renderStreakCard(x, statsY, cardW, statsH, stats.streak, theme);
     } else {
+      const codeCards = [
+        { label: "Today", add: stats.today.additions, del: stats.today.deletions },
+        { label: periodLabel, add: stats.periodAvg.additions, del: stats.periodAvg.deletions },
+        { label: "Year Avg", add: stats.yearAvg.additions, del: stats.yearAvg.deletions },
+      ];
+      const card = codeCards[i];
       statsSvg += renderStatCard(x, statsY, cardW, statsH, card.label, card.add, card.del, theme);
     }
   }
 
-  // Chart
   const chartOpts = { chartX, chartY: chartTopY, chartW, chartH };
-  const chartContent =
-    chartType === "area"
+  const chartContent = isCommitChart
+    ? renderCommitChart(chartData, theme, chartOpts)
+    : chartType === "area"
       ? renderAreaChart(chartData, theme, chartOpts)
       : renderBarChart(chartData, theme, chartOpts);
 
-  // Legend
   const legendY = HEIGHT - 18;
-
-  const svg = `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-  ${renderAnimations(animate)}
-
-  <!-- Background -->
-  <rect width="${WIDTH}" height="${HEIGHT}" rx="12" fill="${theme.bg}" ${theme.bg === "transparent" ? "" : `stroke="${theme.border}" stroke-width="1"`}/>
-
-  <!-- Header -->
-  <g class="cpd-header">
-    <a href="https://github.com/mpge/code-per-day" target="_blank">
-      <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">Code Per Day</text>
-    </a>
-    <text x="${WIDTH - PADDING}" y="${headerY + 20}" fill="${theme.textSecondary}" font-size="13" font-family="'Segoe UI', sans-serif" text-anchor="end" font-weight="500">@${escapeXml(login)}</text>
-  </g>
-
-  <!-- Stats Cards -->
-  <g class="cpd-stats">
-    ${statsSvg}
-  </g>
-
-  <!-- Chart -->
-  <g class="cpd-chart">
-    ${chartContent}
-  </g>
-
-  <!-- Legend -->
-  <g class="cpd-legend">
+  const legendContent = isCommitChart
+    ? `
+    <circle cx="${PADDING + 6}" cy="${legendY}" r="5" fill="${theme.accent}"/>
+    <text x="${PADDING + 16}" y="${legendY + 4}" fill="${theme.text}" font-size="11" font-family="'Segoe UI', sans-serif">Commits</text>
+    <text x="${WIDTH - PADDING}" y="${legendY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last ${chartData.length} days · ${stats.periodTotal.commits.toLocaleString("en-US")} commits</text>`
+    : `
     <circle cx="${PADDING + 6}" cy="${legendY}" r="5" fill="${theme.additions}"/>
     <text x="${PADDING + 16}" y="${legendY + 4}" fill="${theme.text}" font-size="11" font-family="'Segoe UI', sans-serif">Additions</text>
     <circle cx="${PADDING + 100}" cy="${legendY}" r="5" fill="${theme.deletions}"/>
     <text x="${PADDING + 110}" y="${legendY + 4}" fill="${theme.text}" font-size="11" font-family="'Segoe UI', sans-serif">Deletions</text>
-    <text x="${WIDTH - PADDING}" y="${legendY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last ${chartData.length} days · ${formatNum(stats.periodTotal.additions)} / ${formatNum(-stats.periodTotal.deletions)} lines</text>
+    <text x="${WIDTH - PADDING}" y="${legendY + 4}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="end">Last ${chartData.length} days · ${formatNum(stats.periodTotal.additions)} / ${formatNum(-stats.periodTotal.deletions)} lines</text>`;
+
+  return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  ${renderAnimations(animate)}
+
+  <rect width="${WIDTH}" height="${HEIGHT}" rx="12" fill="${theme.bg}" ${theme.bg === "transparent" ? "" : `stroke="${theme.border}" stroke-width="1"`}/>
+
+  <g class="cpd-header">
+    <a href="https://github.com/mpge/code-per-day" target="_blank">
+      <text x="${PADDING}" y="${headerY + 20}" fill="${theme.title}" font-size="18" font-family="'Segoe UI', sans-serif" font-weight="700">${isCommitChart ? "Commits Per Day" : "Code Per Day"}</text>
+    </a>
+    <text x="${WIDTH - PADDING}" y="${headerY + 20}" fill="${theme.textSecondary}" font-size="13" font-family="'Segoe UI', sans-serif" text-anchor="end" font-weight="500">@${escapeXml(login)}</text>
   </g>
 
-  <!-- Get your own -->
+  <g class="cpd-stats">
+    ${statsSvg}
+  </g>
+
+  <g class="cpd-chart">
+    ${chartContent}
+  </g>
+
+  <g class="cpd-legend">
+    ${legendContent}
+  </g>
+
   <a href="https://github.com/mpge/code-per-day" target="_blank">
-    <text x="${WIDTH / 2}" y="${HEIGHT - 8}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle" opacity="0.6">Get your own — github.com/mpge/code-per-day</text>
+    <text x="${WIDTH / 2}" y="${HEIGHT - 8}" fill="${theme.textSecondary}" font-size="10" font-family="'Segoe UI', sans-serif" text-anchor="middle" opacity="0.6">Get your own - github.com/mpge/code-per-day</text>
   </a>
 </svg>`;
-
-  return svg;
 }
 
 function escapeXml(s) {
@@ -29777,89 +30019,13 @@ module.exports = parseParams
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// Code Per Day - GitHub Action
-// Author: MPGE (https://github.com/mpge)
-// Licensed under MIT
-
-const core = __nccwpck_require__(7484);
-const fs = __nccwpck_require__(9896);
-const path = __nccwpck_require__(6928);
-const { fetchAllCommitData } = __nccwpck_require__(6474);
-const { processData } = __nccwpck_require__(1672);
-const { generateSVG } = __nccwpck_require__(1989);
-const { getTheme, getAllThemeNames } = __nccwpck_require__(7840);
-
-async function run() {
-  try {
-    // Read inputs
-    const token = core.getInput("github_token", { required: true });
-    const username = core.getInput("username") || "";
-    const themeName = core.getInput("theme") || "dark";
-    const period = parseInt(core.getInput("period") || "30", 10);
-    const outputPath = core.getInput("output_path") || "./code-per-day";
-    const allThemes = core.getInput("all_themes") === "true";
-    const chartType = core.getInput("chart_type") || "bars";
-    const animate = core.getInput("animations") !== "false";
-
-    // Fetch data from GitHub
-    const { login, commits, since, now, yearAgo, calendar } = await fetchAllCommitData(
-      token,
-      username || undefined,
-      period
-    );
-
-    // Process into chart data
-    const { chartData, stats } = processData(commits, since, now, yearAgo, calendar);
-
-    console.log(`\nStats for @${login}:`);
-    console.log(`  Today:    +${stats.today.additions} / -${stats.today.deletions}`);
-    console.log(`  ${period}d Avg: +${stats.periodAvg.additions} / -${stats.periodAvg.deletions}`);
-    console.log(`  Year Avg: +${stats.yearAvg.additions} / -${stats.yearAvg.deletions}`);
-    console.log(`  Streak:   ${stats.streak} days`);
-
-    // Debug: show last 14 days of data
-    console.log(`\nDaily breakdown (last 14 days):`);
-    const tail = chartData.slice(-14);
-    for (const d of tail) {
-      const marker = (d.additions > 0 || d.deletions > 0) ? "  *" : "";
-      console.log(`  ${d.date}: +${d.additions} / -${d.deletions}${marker}`);
-    }
-
-    // Ensure output directory
-    fs.mkdirSync(outputPath, { recursive: true });
-
-    const options = { chartType, animate, periodDays: period };
-
-    if (allThemes) {
-      // Generate one SVG per theme
-      for (const name of getAllThemeNames()) {
-        const theme = getTheme(name);
-        const svg = generateSVG(chartData, stats, login, theme, options);
-        const filePath = path.join(outputPath, `code-per-day-${name}.svg`);
-        fs.writeFileSync(filePath, svg, "utf8");
-        console.log(`Generated: ${filePath}`);
-      }
-      core.setOutput("svg_path", outputPath);
-    } else {
-      // Generate single SVG
-      const theme = getTheme(themeName);
-      const svg = generateSVG(chartData, stats, login, theme, options);
-      const filePath = path.join(outputPath, `code-per-day-${themeName}.svg`);
-      fs.writeFileSync(filePath, svg, "utf8");
-      console.log(`Generated: ${filePath}`);
-      core.setOutput("svg_path", filePath);
-    }
-
-    console.log("Done!");
-  } catch (err) {
-    core.setFailed(err.message);
-  }
-}
-
-run();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(5105);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map

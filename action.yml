@@ -33,6 +33,10 @@ inputs:
     description: 'Chart style: bars, area'
     required: false
     default: 'bars'
+  image_types:
+    description: 'Comma-separated image families to generate: code, commits, all'
+    required: false
+    default: 'code'
   animations:
     description: 'Enable CSS entrance animations in the SVG'
     required: false

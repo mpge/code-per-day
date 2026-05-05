@@ -11,15 +11,16 @@ function toDateKey(d) {
 
 /**
  * Aggregate raw commit data into per-day totals.
- * Returns a Map<string, { additions, deletions }> keyed by YYYY-MM-DD.
+ * Returns a Map<string, { additions, deletions, commits }> keyed by YYYY-MM-DD.
  */
 function aggregateByDay(commits) {
   const map = new Map();
   for (const c of commits) {
     const key = toDateKey(new Date(c.date));
-    const entry = map.get(key) || { additions: 0, deletions: 0 };
+    const entry = map.get(key) || { additions: 0, deletions: 0, commits: 0 };
     entry.additions += c.additions;
     entry.deletions += c.deletions;
+    entry.commits += c.commits || 1;
     map.set(key, entry);
   }
   return map;
@@ -37,7 +38,7 @@ function fillDays(dayMap, from, to) {
 
   while (current <= end) {
     const key = toDateKey(current);
-    const entry = dayMap.get(key) || { additions: 0, deletions: 0 };
+    const entry = dayMap.get(key) || { additions: 0, deletions: 0, commits: 0 };
     result.push({ date: key, ...entry });
     current.setDate(current.getDate() + 1);
   }
@@ -76,7 +77,9 @@ function calculateStreakFromCalendar(calendar) {
  * Calculate summary statistics.
  */
 function calculateStats(dailyData, allDailyData, calendar) {
-  const today = dailyData.length > 0 ? dailyData[dailyData.length - 1] : { additions: 0, deletions: 0 };
+  const today = dailyData.length > 0
+    ? dailyData[dailyData.length - 1]
+    : { additions: 0, deletions: 0, commits: 0 };
 
   const sum = (arr, key) => arr.reduce((s, d) => s + d[key], 0);
   const avg = (arr, key) => arr.length > 0 ? Math.round(sum(arr, key) / arr.length) : 0;
@@ -84,24 +87,35 @@ function calculateStats(dailyData, allDailyData, calendar) {
   // Period average (the charted days)
   const periodAvgAdd = avg(dailyData, "additions");
   const periodAvgDel = avg(dailyData, "deletions");
+  const periodAvgCommits = avg(dailyData, "commits");
 
   // Yearly average (all data)
   const yearAvgAdd = avg(allDailyData, "additions");
   const yearAvgDel = avg(allDailyData, "deletions");
+  const yearAvgCommits = avg(allDailyData, "commits");
 
   // Period totals
   const periodTotalAdd = sum(dailyData, "additions");
   const periodTotalDel = sum(dailyData, "deletions");
+  const periodTotalCommits = sum(dailyData, "commits");
 
   // Yearly totals
   const yearTotalAdd = sum(allDailyData, "additions");
   const yearTotalDel = sum(allDailyData, "deletions");
+  const yearTotalCommits = sum(allDailyData, "commits");
 
   // Busiest day
-  let busiestDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0 };
+  let busiestDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0, commits: 0 };
   for (const d of dailyData) {
     if (d.additions + d.deletions > busiestDay.additions + busiestDay.deletions) {
       busiestDay = d;
+    }
+  }
+
+  let mostCommitsDay = dailyData[0] || { date: "N/A", additions: 0, deletions: 0, commits: 0 };
+  for (const d of dailyData) {
+    if (d.commits > mostCommitsDay.commits) {
+      mostCommitsDay = d;
     }
   }
 
@@ -122,12 +136,13 @@ function calculateStats(dailyData, allDailyData, calendar) {
       })();
 
   return {
-    today: { additions: today.additions, deletions: today.deletions },
-    periodAvg: { additions: periodAvgAdd, deletions: periodAvgDel },
-    yearAvg: { additions: yearAvgAdd, deletions: yearAvgDel },
-    periodTotal: { additions: periodTotalAdd, deletions: periodTotalDel },
-    yearTotal: { additions: yearTotalAdd, deletions: yearTotalDel },
+    today: { additions: today.additions, deletions: today.deletions, commits: today.commits },
+    periodAvg: { additions: periodAvgAdd, deletions: periodAvgDel, commits: periodAvgCommits },
+    yearAvg: { additions: yearAvgAdd, deletions: yearAvgDel, commits: yearAvgCommits },
+    periodTotal: { additions: periodTotalAdd, deletions: periodTotalDel, commits: periodTotalCommits },
+    yearTotal: { additions: yearTotalAdd, deletions: yearTotalDel, commits: yearTotalCommits },
     busiestDay,
+    mostCommitsDay,
     streak,
     periodDays: dailyData.length,
   };
